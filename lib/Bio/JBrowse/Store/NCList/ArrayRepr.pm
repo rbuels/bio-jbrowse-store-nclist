@@ -91,6 +91,7 @@ use Carp;
 
 sub new {
     my ($class, $classes) = @_;
+    $classes ||= [];
 
     # fields is an array of (map from attribute name to attribute index)
     my @fields;
@@ -100,18 +101,51 @@ sub new {
     }
 
     my $self = {
-        'classes' => $classes,
-        'fields' => \@fields
+        fields  => \@fields,
+        classes => $classes,
+        classes_by_fingerprint => {
+            map { join( '-', @{$_->{attributes}} ) => $_ } @$classes
+        }
     };
 
     bless $self, $class;
     return $self;
 }
 
-sub attrIndices {
-    my ($self, $attr) = @_;
-    return [ map { $_->{$attr} } @{$self->{'fields'}} ];
+sub convert_hashref_stream {
+    my ( $self, $in_stream ) = @_;
+    return sub {
+        my $f = $in_stream->();
+        return unless $f;
+
+        my $class = $self->getClass( $f );
+        return [ $class->{index}, map { $f->{$_} } @{$class->{attributes}} ];
+    };
 }
+
+my %skip_field = map { $_ => 1 } qw( start end strand );
+sub getClass {
+    my ( $self, $feature ) = @_;
+
+    my @attrs = keys %$feature;
+    my $attr_fingerprint = join '-', @attrs;
+
+    return $self->{classes_by_fingerprint}{$attr_fingerprint} ||= do {
+        my @attributes = ( 'start', 'end', 'strand', ( grep !$skip_field{$_}, @attrs ) );
+        my $i = 0;
+        my $class = {
+            attributes => \@attributes,
+            attr_idx => { map { $_ => ++$i } @attributes },
+            # assumes that if a field is an array for one feature, it will be for all of them
+            isArrayAttr => { map { $_ => 1 } grep ref($feature->{$_}) eq 'ARRAY', @attrs }
+        };
+        push @{ $self->{fields} }, $class->{attr_idx};
+        push @{ $self->{classes} }, $class;
+        $class->{index} = $#{ $self->{classes} };
+        return $class;
+    };
+}
+
 
 sub get {
     my ($self, $obj, $attr) = @_;
@@ -180,6 +214,10 @@ sub makeGetter {
     };
 }
 
+sub attrIndices {
+    my ($self, $attr) = @_;
+    return [ map { $_->{$attr} } @{$self->{'fields'}} ];
+}
 sub makeFastSetter {
     # this method can be used if the attribute is guaranteed to be in
     # the attributes array for the object's class
@@ -194,7 +232,6 @@ sub makeFastSetter {
         }
     };
 }
-
 sub makeFastGetter {
     # this method can be used if the attribute is guaranteed to be in
     # the attributes array for the object's class
@@ -210,15 +247,6 @@ sub makeFastGetter {
             return undef;
         }
     };
-}
-
-sub construct {
-    my ($self, $dict, $cls) = @_;
-    my $result = [];
-    foreach my $key (keys %$dict) {
-        $self->set($result, $key, $dict->{$key});
-    }
-    return $result;
 }
 
 1;
