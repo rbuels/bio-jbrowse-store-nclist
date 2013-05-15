@@ -23,24 +23,7 @@ my $repr =  Bio::JBrowse::Store::NCList::ArrayRepr->new;
 
 my $stream = $repr->convert_hashref_stream( sub { shift @test_features } );
 my $out = [ snarf_stream( $stream ) ];
-is_deeply( $out, [
-  [
-    0,
-    20,
-    30,
-    1,
-    'noggin'
-  ],
-  [
-    1,
-    40,
-    50,
-    1,
-    'zonker',
-    'easy',
-    'slow ride'
-  ]
-], 'got right output' ) or diag explain $out;
+is( $#{$out}, 1 ) or diag explain $out;
 is( $repr->get( $out->[1], 'fogHAT'  ), 'slow ride' );
 is( $repr->get( $out->[1], 'take_it' ), 'easy'      );
 is( $repr->get( $out->[0], 'fogbat'  ), 'noggin'    );

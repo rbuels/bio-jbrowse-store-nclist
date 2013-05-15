@@ -31,15 +31,12 @@ use List::Util qw(max);
 
 =cut
 
+use Carp::Always;
 sub new {
     my ($class, $start, $end, $setSublist, $featList) = @_;
 
     my @features = sort {
-	if ($start->($a) != $start->($b)) {
-	    $start->($a) - $start->($b);
-	} else {
-	    $end->($b) - $end->($a);
-	}
+        $start->($a) <=> $start->($b) || $end->($b) <=> $end->($a)
     } @$featList;
 
     #@sublistStack is a list of all the currently relevant sublists

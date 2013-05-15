@@ -21,12 +21,12 @@ my %nclist_output;
 my $list = $class->new(
     # array spec
     Bio::JBrowse::Store::NCList::ArrayRepr->new([
-        { attributes => [qw( Start End Strand Id Name Subfeatures )],
-          isArrayAttr => { 'Subfeatures' => 1 },
+        { attributes => [qw( start end strand id name subfeatures )],
+          isArrayAttr => { 'subfeatures' => 1 },
         },
-        { attributes  => [qw( Start End Strand Type )] },
-        { attributes  => [qw( Start End Chunk )],
-          isArrayAttr => {'Sublist' => 1}
+        { attributes  => [qw( start end strand type )] },
+        { attributes  => [qw( start end chunk )],
+          isArrayAttr => {'sublist' => 1}
         },
         ]
     ),

@@ -122,7 +122,7 @@ sub put {
     $self->_write_htaccess;
 
     my $file = $self->fullPath($path);
-    my $fh = new IO::File $file, O_WRONLY | O_CREAT
+    my $fh = IO::File->new( $file, O_WRONLY | O_CREAT )
       or die "couldn't open $file: $!";
     flock $fh, LOCK_EX;
     $fh->seek(0, SEEK_SET);
@@ -147,7 +147,7 @@ sub get {
     my $file = $self->fullPath($path);
     if (-s $file) {
         my $OLDSEP = $/;
-        my $fh = new IO::File $file, O_RDONLY
+        my $fh = IO::File->new( $file, O_RDONLY )
             or die "couldn't open $file: $!";
         binmode($fh, ":gzip") if $self->{compress};
         flock $fh, LOCK_SH;

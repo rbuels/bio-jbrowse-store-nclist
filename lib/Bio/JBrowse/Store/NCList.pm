@@ -1,226 +1,182 @@
 package Bio::JBrowse::Store::NCList;
 use strict;
 use warnings;
-use Carp;
+
+use Carp ();
+use Scalar::Util ();
 
 use Storable ();
 
-use Bio::JBrowse::Store::NCList::ArrayRepr;
-use Bio::JBrowse::Store::NCList::LazyNCList;
+use Sort::External ();
+
+use Bio::JBrowse::Store::NCList::ArrayRepr ();
+use Bio::JBrowse::Store::NCList::IntervalStore ();
+use Bio::JBrowse::Store::NCList::JSONFileStorage ();
 
 =head1 NAME
 
-Bio::JBrowse::Store::NCList - stores a set of intervals (genomic
-features) in an on-disk lazy nested-containment list
+Bio::JBrowse::Store::NCList - stores feature data in an on-disk lazy
+nested-containment list optimized for chunked fetching over HTTP
 
 =head1 SYNOPSIS
 
-  my $is = Bio::JBrowse::Store::NCList->new({
-               classes => [
-                   {
-                     attributes => ["Start", "End", "Strand"],
-                   },
-               ],
-               urlTemplate => "lf-{Chunk}.jsonz",
-           });
-  my $chunkBytes = 80_000;
-  $is->startLoad($chunkBytes);
-  $is->addSorted([10, 100, -1])
-  $is->addSorted([50, 80, 1])
-  $is->addSorted([90, 150, -1])
-  $is->finishLoad();
-  $is->overlap(60, 85)
+  my $store = Bio::JBrowse::Store::NCList->new({
+      path   => "path/to/directory"
+  });
 
-  => ([10, 100, -1], [50, 80, 1])
+  # insert feature data into the store
+  $store->insert( $stream );
+  $store->insert_presorted( $sorted_stream );
+
+  # retrieve feature data from the store
+  my $fstream = $store->get_features( seq_id => 'chr1', start => 60, end => 85 );
+  while( my $feature = $stream->() ) {
+      # do something with the feature
+  }
 
 =head1 METHODS
 
-=head2 new
+=head2 new( \%args )
 
- Title   : new
- Usage   : Bio:JBrowse::Store::NCList->new(
-               classes => {attributes => ["Start", "End", "Strand"]},
-           )
- Function: create a new store
- Returns : an Bio::JBrowse::Store::NCList object
- Args    : The Bio::JBrowse::Store::NCList constuctor accepts the named parameters:
-           store: optional object with put(path, data) method, will be used to output
-                  feature data
-           compress: if true, attempt to compress the data on disk
-           classes: describes the feature arrays; will be used to construct
-                    an Bio::JBrowse::Store::NCList::ArrayRepr
-           urlTemplate (optional): template for URLs where chunks of feature
-                                   data will be stored.  This is relative to
-                                   the directory with the "trackData.json" file
-           nclist (optional): the root of the nclist
-           count (optional): the number of intervals in this Bio::JBrowse::Store::NCList
-           minStart (optional): the earliest interval start point
-           maxEnd (optional): the latest interval end point
+ Create a new store, overwriting any existing files.
 
-           If this Bio::JBrowse::Store::NCList hasn't been loaded yet, the optional
-           parameters aren't necessary.  But to access a previously-loaded
-           Bio::JBrowse::Store::NCList, the optional parameters *are* needed.
+=head3 Arguments
+
+=over 4
+
+=item path
+
+path to the directory in which to put the formatted files
+
+=item compress
+
+if true, store the data files in gzipped format
+
+=back
 
 =cut
 
 sub new {
-    my ($class, $args) = @_;
+    return shift->_new( { %{+shift}, write => 1 } );
+}
 
-    my $self = {
-                store => $args->{store} || Bio::JBrowse::Store::NCList::JSONFileStorage->new( $outDir, $args->{compress}),
+sub open {
+    return shift->_new( { %{+shift}, write => 0 } );
+}
 
-                classes => Storable::dclone( $args->{classes} ),
-                urlTemplate => $args->{urlTemplate} || ("lf-{Chunk}"
-                                                        . $args->{store}->ext),
-                attrs => Bio::JBrowse::Store::NCList::ArrayRepr->new($args->{classes}),
-                nclist => $args->{nclist},
-                minStart => $args->{minStart},
-                maxEnd => $args->{maxEnd},
-                loadedChunks => {}
-               };
+sub _new {
+    my ( $class, $args ) = @_;
 
-    if( defined $args->{nclist} ) {
-        # we're already loaded
-        $self->{lazyNCList} =
-          Bio::JBrowse::Store::NCList::LazyNCList->importExisting(
-              $self->{attrs},
-              $args->{count},
-              $args->{minStart},
-              $args->{maxEnd},
-              sub { $self->_loadChunk( @_ ); },
-              $args->{nclist} );
+    my $self = bless { %$args }, $class;
+
+    $self->{array_rep} = Bio::JBrowse::Store::NCList::ArrayRepr->new;
+
+    if( $self->{write} ) {
+        if( -e $self->{path} ) {
+            File::Path::rmtree( $self->{path} );
+            File::Path::mkpath( $self->{path} );
+        }
+        unless( -d $self->{path} ) {
+            die "$! attempting to make directory '$self->{path}'\n";
+        }
     }
 
-    bless $self, $class;
+    -e $self->{path}
+        or die "Target directory $self->{path} does not exist, and cannot create.\n";
+    -d $self->{path}
+        or die "Target directory $self->{path} exists, but is not a directory.\n";
 
     return $self;
 }
+# || Bio::JBrowse::Store::NCList::JSONFileStorage->new( $outDir, $args->{compress}),
+use Data::Dump 'dump';
 
-sub _loadChunk {
-    my ($self, $chunkId) = @_;
-    my $chunk = $self->{loadedChunks}->{$chunkId};
-    if (defined($chunk)) {
-        return $chunk;
-    } else {
-        (my $path = $self->{urlTemplate}) =~ s/\{Chunk\}/$chunkId/g;
-        $chunk = $self->{store}->get( $path );
-        # TODO limit the number of chunks that we keep in memory
-        $self->{loadedChunks}->{$chunkId} = $chunk;
-        return $chunk;
+sub insert_presorted {
+    my ( $self, @streams ) = @_;
+
+    my $arep = $self->{array_rep};
+    my $stream = $self->_combine_streams( @streams );
+
+    my $curr_refseq = 'no reference sequence yet, cousin.';
+    my $interval_store;
+    while( my $f = $stream->() ) {
+        unless( $interval_store && $curr_refseq eq $f->{seq_id} ) {
+            $interval_store->finishLoad if $interval_store;
+            $interval_store = Bio::JBrowse::Store::NCList::IntervalStore->new({
+                store => Bio::JBrowse::Store::NCList::JSONFileStorage->new(
+                    $self->_refseq_path( $f->{seq_id} ),
+                    $self->{compress}
+                    ),
+                arrayRepr => $arep
+                });
+            $interval_store->startLoad( sub { 1 }, 2_000 );
+        }
+        delete $f->{seq_id};
+        my $a = $arep->convert_hashref( $f );
+        $interval_store->addSorted( $a );
     }
+    $interval_store->finishLoad if $interval_store;
 }
 
-=head2 startLoad( $measure, $chunkBytes )
+sub _refseq_path {
+    my ( $self, $refseq_name ) = @_;
+    return File::Spec->catdir( $self->{path}, $refseq_name );
+}
 
-=cut
+sub insert {
+    my $self = shift;
+    $self->insert_presorted( $self->_sort( @_ )  );
+}
 
-sub startLoad {
-    my ($self, $measure, $chunkBytes) = @_;
+# take zero or more streams and make one stream that feeds from them
+# all
+sub _combine_streams {
+    my ( $self, @streams ) = @_;
 
-    if (defined($self->{nclist})) {
-        confess "loading into an already-loaded Bio::JBrowse::Store::NCList";
-    } else {
-        # add a new class for "fake" features
-        push @{$self->{classes}}, {
-                                   'attributes' => ['Start', 'End', 'Chunk'],
-                                   'isArrayAttr' => {'Sublist' => 1}
-                                  };
-        $self->{lazyClass} = $#{$self->{classes}};
-        my $makeLazy = sub {
-            my ($start, $end, $chunkId) = @_;
-            return [$self->{lazyClass}, $start, $end, $chunkId];
+    return sub {} unless @streams;
+
+    return $streams[0] if @streams == 1;
+
+    return sub {
+        return $streams[0]->() || @streams > 1 && do {
+            shift @streams;
+            $streams[0]->();
         };
-        my $output = sub {
-            my ($toStore, $chunkId) = @_;
-            (my $path = $self->{urlTemplate}) =~ s/\{Chunk\}/$chunkId/g;
-            $self->{store}->put($path, $toStore);
-        };
-        $self->{attrs} = Bio::JBrowse::Store::NCList::ArrayRepr->new($self->{classes});
-        $self->{lazyNCList} =
-          Bio::JBrowse::Store::NCList::LazyNCList->new($self->{attrs},
-			  $self->{lazyClass},
-                          $makeLazy,
-                          sub { $self->_loadChunk( @_); },
-                          $measure,
-                          $output,
-                          $chunkBytes);
+    };
+}
+
+sub _sort {
+    my ( $self, @streams ) = @_;
+
+    # make a single stream
+    my $stream = $self->_combine_streams( @streams );
+
+    # put the stream through an external sorter, sorting by ref seq
+    # and start coordinate
+    my $sorter = Sort::External->new( cache_size => 1_000_000 );
+    while( my $f = $stream->() ) {
+        $sorter->feed( "$f->{seq_id}\0$f->{start}\0".Storable::freeze( $f ) );
     }
-}
+    $sorter->finish;
 
-=head2 addSorted( \@feature )
-
-=cut
-
-sub addSorted {
-    my ($self, $feat) = @_;
-    $self->{lazyNCList}->addSorted($feat);
-}
-
-=head2 finishLoad()
-
-=cut
-
-sub finishLoad {
-    my ($self) = @_;
-    $self->{lazyNCList}->finish();
-    $self->{nclist} = $self->lazyNCList->topLevelList();
-}
-
-=head2 overlapCallback( $from, $to, \&func )
-
-Calls the given function once for each of the intervals that overlap
-the given interval if C<<$from <= $to>>, iterates left-to-right, otherwise
-iterates right-to-left.
-
-=cut
-
-sub overlapCallback {
-    my ($self, $start, $end, $cb) = @_;
-    $self->lazyNCList->overlapCallback($start, $end, $cb);
+    # return a stream that reads from the external sorter
+    return sub {
+        my $s = $sorter->fetch
+            or return;
+        return Storable::thaw( substr( $s, 1+index( $s, "\0", 1+index( $s, "\0" ) )));
+    };
 }
 
 
-sub lazyNCList   { shift->{lazyNCList}        }
-sub count        { shift->{lazyNCList}->count }
-sub hasIntervals { shift->count > 0           }
-sub store        { shift->{store}             }
-sub classes      { shift->{classes}           }
-
-=head2 descriptor
-
- Title   : descriptor
- Usage   : $list->descriptor
- Returns : a hash containing the data needed to re-construct this
-           Bio::JBrowse::Store::NCList, including the root of the
-           NCList plus some metadata and configuration.  The return
-           value can be passed to the constructor later.
-
-=cut
-
-sub descriptor {
+sub _finish_load {
     my ( $self ) = @_;
-    return {
-            classes => $self->{classes},
-            lazyClass => $self->{lazyClass},
-            nclist => $self->{nclist},
-            urlTemplate => $self->{urlTemplate},
-            count => $self->count,
-            minStart => $self->lazyNCList->minStart,
-            maxEnd => $self->lazyNCList->maxEnd
-           };
+    if( $self->{loading} ) {
+        $self->{ival_store}->finishLoad();
+    }
+}
+
+sub DESTROY {
+    shift->_finish_load;
 }
 
 1;
-
-=head1 AUTHOR
-
-Mitchell Skinner E<lt>jbrowse@arctur.usE<gt>
-
-Copyright (c) 2007-2011 The Evolutionary Software Foundation
-
-This package and its accompanying libraries are free software; you can
-redistribute it and/or modify it under the terms of the LGPL (either
-version 2.1, or at your option, any later version) or the Artistic
-License 2.0.  Refer to LICENSE for the full license text.
-
-=cut

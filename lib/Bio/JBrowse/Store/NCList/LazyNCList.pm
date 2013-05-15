@@ -36,9 +36,9 @@ sub new {
         $measure, $output, $sizeThresh) = @_;
 
     my $self = { attrs => $attrs,
-	         start => $attrs->makeFastGetter("Start"),
-                 end => $attrs->makeFastGetter("End"),
-                 setSublist => $attrs->makeSetter("Sublist"),
+	         start => $attrs->makeGetter("start"),
+                 end => $attrs->makeGetter("end"),
+                 setSublist => $attrs->makeSetter("sublist"),
 		 lazyClass => $lazyClass,
                  makeLazy => $makeLazy,
                  loadChunk => $loadChunk,
@@ -64,8 +64,8 @@ sub importExisting {
 
     my $self = { attrs => $attrs,
 		 lazyClass => $lazyClass,
-		 start => $attrs->makeFastGetter("Start"),
-                 end => $attrs->makeFastGetter("End"),
+		 start => $attrs->makeGetter("start"),
+                 end => $attrs->makeGetter("end"),
                  count => $count,
                  minStart => $minStart,
                  maxEnd => $maxEnd,
@@ -96,7 +96,7 @@ sub addSorted {
 
     $self->{count} += 1;
     my $lastAdded = $self->{lastAdded};
-    my $start = $self->{start}->( $feat );
+    my $start = $self->{start}->( $feat ) or die;
     my $end = $self->{end}->( $feat );
 
     if (defined($lastAdded)) {
@@ -243,8 +243,8 @@ sub iterHelper {
         $searchGet, $testGet, $path) = @_;
     my $len = $#{$arr} + 1;
     my $i = $self->binarySearch($arr, $from, $searchGet);
-    my $getChunk = $self->{attrs}->makeGetter("Chunk");
-    my $getSublist = $self->{attrs}->makeGetter("Sublist");
+    my $getChunk = $self->{attrs}->makeGetter("chunk");
+    my $getSublist = $self->{attrs}->makeGetter("sublist");
 
     while (($i < $len)
            && ($i >= 0)

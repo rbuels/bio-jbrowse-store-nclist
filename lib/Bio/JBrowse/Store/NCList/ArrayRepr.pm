@@ -79,7 +79,7 @@ use Carp;
     In the end, we get something like this:
 
         classes = [
-            { "attributes"  : [ "Start", "End", "Subfeatures" ],
+            { "attributes"  : [ "start", "end", "subfeatures" ],
               "proto"       : { "Chrom"       : "chr1"   },
               "isArrayAttr" : { "Subfeatures" : true     }
             }
@@ -112,18 +112,22 @@ sub new {
     return $self;
 }
 
+sub convert_hashref {
+    my ( $self, $hashref ) = @_;
+    my $class = $self->getClass( $hashref );
+    return [ $class->{index}, map { $hashref->{$_} } @{$class->{attributes}} ];
+}
+
 sub convert_hashref_stream {
     my ( $self, $in_stream ) = @_;
     return sub {
         my $f = $in_stream->();
         return unless $f;
-
-        my $class = $self->getClass( $f );
-        return [ $class->{index}, map { $f->{$_} } @{$class->{attributes}} ];
+        return $self->convert_hashref( $f );
     };
 }
 
-my %skip_field = map { $_ => 1 } qw( start end strand );
+my %skip_field = map { $_ => 1 } qw( start end );
 sub getClass {
     my ( $self, $feature ) = @_;
 
@@ -131,7 +135,7 @@ sub getClass {
     my $attr_fingerprint = join '-', @attrs;
 
     return $self->{classes_by_fingerprint}{$attr_fingerprint} ||= do {
-        my @attributes = ( 'start', 'end', 'strand', ( grep !$skip_field{$_}, @attrs ) );
+        my @attributes = ( 'start', 'end', ( grep !$skip_field{$_}, @attrs ) );
         my $i = 0;
         my $class = {
             attributes => \@attributes,
@@ -142,7 +146,7 @@ sub getClass {
         push @{ $self->{fields} }, $class->{attr_idx};
         push @{ $self->{classes} }, $class;
         $class->{index} = $#{ $self->{classes} };
-        return $class;
+        $class;
     };
 }
 
@@ -172,7 +176,7 @@ sub fastGet {
     # this method can be used if the attribute is guaranteed to be in
     # the attributes array for the object's class
     my ($self, $obj, $attr) = @_;
-    return $obj->[$self->{'fields'}->[$obj->[0]]->{$attr}];
+    return $obj->[ $self->{fields}->[$obj->[0]]->{$attr} ];
 }
 
 sub set {
@@ -189,6 +193,10 @@ sub set {
         }
         $obj->[$adhocIndex]->{$attr} = $val;
     }
+}
+
+sub descriptor {
+    [ map { { attributes => $_->{attributes}, isArrayAttr => $_->{isArrayAttr} } } @{shift->{classes}} ]
 }
 
 sub fastSet {
@@ -211,41 +219,6 @@ sub makeGetter {
     return sub {
         my ($obj) = @_;
         return $self->get($obj, $attr);
-    };
-}
-
-sub attrIndices {
-    my ($self, $attr) = @_;
-    return [ map { $_->{$attr} } @{$self->{'fields'}} ];
-}
-sub makeFastSetter {
-    # this method can be used if the attribute is guaranteed to be in
-    # the attributes array for the object's class
-    my ($self, $attr) = @_;
-    my $indices = $self->attrIndices($attr);
-    return sub {
-        my ($obj, $val) = @_;
-        if (defined($indices->[$obj->[0]])) {
-            $obj->[$indices->[$obj->[0]]] = $val;
-        } else {
-            # report error?
-        }
-    };
-}
-sub makeFastGetter {
-    # this method can be used if the attribute is guaranteed to be in
-    # the attributes array for the object's class
-    my ($self, $attr) = (@_);
-    my $indices = $self->attrIndices($attr);
-    croak "no attribute '$attr' found in representation" unless grep defined, @$indices;
-    return sub {
-        my ($obj) = @_;
-        if ( defined $obj && defined $obj->[0] && defined $indices->[ $obj->[0] ] ) {
-            return $obj->[$indices->[$obj->[0]]];
-        } else {
-            # report error?
-            return undef;
-        }
     };
 }
 
