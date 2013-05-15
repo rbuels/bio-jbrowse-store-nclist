@@ -25,12 +25,12 @@ nested-containment list optimized for chunked fetching over HTTP
   });
 
   # insert feature data into the store
-  $store->insert( $stream );
-  $store->insert_presorted( $sorted_stream );
+  $store->insert( $stream, ... );
+  $store->insert_presorted( $sorted_stream, ... );
 
   # retrieve feature data from the store
   my $fstream = $store->get_features( seq_id => 'chr1', start => 60, end => 85 );
-  while( my $feature = $stream->() ) {
+  while( my $feature = $fstream->() ) {
       # do something with the feature
   }
 
@@ -110,6 +110,7 @@ sub insert_presorted {
                 arrayRepr => $arep
                 });
             $interval_store->startLoad( sub { 1 }, 2_000 );
+            $curr_refseq = $f->{seq_id};
         }
         delete $f->{seq_id};
         my $a = $arep->convert_hashref( $f );

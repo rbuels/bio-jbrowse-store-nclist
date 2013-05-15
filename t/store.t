@@ -15,7 +15,14 @@ my $store = Bio::JBrowse::Store::NCList->new({ path => $dir });
 my @test_features = (
     { seq_id => 'ctgB', start => 20, end => 20 },
     { seq_id => 'ctgA', start => 43, end => 70 },
-    { seq_id => 'ctgA', start => 42, end => 64, noggin => 'fogbat' },
+    { seq_id => 'ctgA', start => 4302, end => 4800, biggie => 'smalls' },
+    { seq_id => 'ctgA', start => 42, end => 64, noggin => 'fogbat',
+      subfeatures => [
+          { start => 44,
+            end => 44
+            }
+          ]
+      },
     );
 
 { # test sorting
@@ -31,7 +38,12 @@ my @test_features = (
                        'end' => 64,
                        'noggin' => 'fogbat',
                        'seq_id' => 'ctgA',
-                       'start' => '42'
+                       'start' => '42',
+                       subfeatures => [
+                           { start => 44,
+                             end => 44
+                             }
+                           ]
                        },
                    {
                        'end' => 70,
@@ -39,12 +51,18 @@ my @test_features = (
                        'start' => '43'
                        },
                    {
+                       'end' => 4800,
+                       'seq_id' => 'ctgA',
+                       'start' => '4302',
+                       biggie => 'smalls',
+                       },
+                   {
                        'end' => 20,
                        'seq_id' => 'ctgB',
                        'start' => '20'
                        }
-                   ]
-               ) or diag explain \@sorted_features;
+                   ],
+               'sort works') or diag explain \@sorted_features;
 }
 
 $store->insert( do {
