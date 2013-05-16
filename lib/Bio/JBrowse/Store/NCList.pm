@@ -74,8 +74,8 @@ sub _new {
     if( $self->{write} ) {
         if( -e $self->{path} ) {
             File::Path::rmtree( $self->{path} );
-            File::Path::mkpath( $self->{path} );
         }
+        File::Path::mkpath( $self->{path} );
         unless( -d $self->{path} ) {
             die "$! attempting to make directory '$self->{path}'\n";
         }
