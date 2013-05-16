@@ -11,10 +11,10 @@ sub open_gff3(@) {
 }
 
 
-my @f = snarf_stream( Bio::JBrowse::FeatureStream::GFF3->new( open_gff3( 't/data/au9_scaffold_subset_sync.gff3' )) );
+my @f = snarf_stream( Bio::JBrowse::FeatureStream::GFF3->new( open_gff3( 'xt/data/au9_scaffold_subset_sync.gff3' )) );
 is( scalar @f, 6, 'got right feature count' ) or diag explain \@f;
 #diag explain \@f;
-@f = snarf_stream( Bio::JBrowse::FeatureStream::GFF3->new( open_gff3( 't/data/au9_scaffold_subset_sync.gff3', 't/data/au9_scaffold_subset_sync.gff3') ) );
+@f = snarf_stream( Bio::JBrowse::FeatureStream::GFF3->new( open_gff3( 'xt/data/au9_scaffold_subset_sync.gff3', 'xt/data/au9_scaffold_subset_sync.gff3') ) );
 is( scalar @f, 6*2, 'got right double feature count' ) or diag explain \@f;
 
 done_testing;
