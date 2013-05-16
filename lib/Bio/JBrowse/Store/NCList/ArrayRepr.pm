@@ -115,6 +115,7 @@ sub new {
 # convert a feature hashref into array representation
 sub convert_hashref {
     my ( $self, $hashref ) = @_;
+    delete $hashref->{seq_id};
     my $class = $self->getClass( $hashref );
     my $a = [ $class->{index}, map { $hashref->{$_} } @{$class->{attributes}} ];
     if( defined( my $sub_idx = $class->{attr_idx}{subfeatures} ) ) {
@@ -123,6 +124,7 @@ sub convert_hashref {
     return $a;
 }
 
+# convert a stream of hashrefs into a stream of arrays
 sub convert_hashref_stream {
     my ( $self, $in_stream ) = @_;
     return sub {

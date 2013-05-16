@@ -115,7 +115,6 @@ sub insert_presorted {
             $interval_store->startLoad( sub { 1 }, 2_000 );
             $curr_refseq = $f->{seq_id};
         }
-        delete $f->{seq_id};
         my $a = $arep->convert_hashref( $f );
         $interval_store->addSorted( $a );
     }
