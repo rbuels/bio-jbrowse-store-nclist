@@ -4,34 +4,23 @@ use warnings;
 
 use base 'Bio::JBrowse::FeatureStream';
 
-use Bio::GFF3::LowLevel::Parser ();
-
 sub new {
-    my ( $class, @files ) = @_;
+    my ( $class, @parsers ) = @_;
 
-    return sub {} unless @files;
+    return sub {} unless @parsers;
 
-    my $cur_p = Bio::GFF3::LowLevel::Parser->open( shift @files );
     my @items;
+    my $cur_p = shift @parsers;
     my $item_stream = sub {
         return shift @items || do {
             my $i;
-            do { $i = $cur_p->next_item } while( $i && ref $i ne 'ARRAY' );
-            if( $i ) {
-                @items = @$i;
+            until( ref $i eq 'ARRAY' ) {
+                $i = $cur_p->next_item
+                    or $cur_p = shift @parsers
+                    or return;
             }
-            else {
-                return unless @files;
-                $cur_p = Bio::GFF3::LowLevel::Parser->open( shift @files );
-                do { $i = $cur_p->next_item } while( $i && ref $i ne 'ARRAY' );
-                if( $i ) {
-                    @items = @$i;
-                }
-                else {
-                    return;
-                }
-            }
-            return shift @items;
+            @items = @$i;
+            shift @items;
         };
     };
 
@@ -42,9 +31,6 @@ sub new {
     };
     return bless $self, $class;
 }
-
-use Carp::Always;
-use Data::Dump 'dump';
 
 sub _convert {
     my ( $self, $f ) = @_;
