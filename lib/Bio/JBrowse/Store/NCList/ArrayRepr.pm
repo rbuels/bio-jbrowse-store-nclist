@@ -117,7 +117,7 @@ sub convert_hashref {
     my ( $self, $hashref ) = @_;
     my $class = $self->getClass( $hashref );
     my $a = [ $class->{index}, map { $hashref->{$_} } @{$class->{attributes}} ];
-    if( defined( my $sub_idx = $class->{attr_idx}{subfeatures} ) )b {
+    if( defined( my $sub_idx = $class->{attr_idx}{subfeatures} ) ) {
         $a->[$sub_idx] = [ map { $self->convert_hashref( $_ ) } @{$a->[$sub_idx]} ];
     }
     return $a;
