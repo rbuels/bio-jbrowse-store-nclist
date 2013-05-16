@@ -15,7 +15,7 @@ my $store = Bio::JBrowse::Store::NCList->new({ path => $dir });
 my @test_features = (
     { seq_id => 'ctgB', start => 20, end => 20 },
     { seq_id => 'ctgA', start => 43, end => 70 },
-    { seq_id => 'ctgA', start => 4302, end => 4800, biggie => 'smalls' },
+    { seq_id => 'ctgA', start => 4102, end => 4800, biggie => 'smalls' },
     { seq_id => 'ctgA', start => 42, end => 64, noggin => 'fogbat',
       subfeatures => [
           { start => 44,
@@ -53,7 +53,7 @@ my @test_features = (
                    {
                        'end' => 4800,
                        'seq_id' => 'ctgA',
-                       'start' => '4302',
+                       'start' => '4102',
                        biggie => 'smalls',
                        },
                    {

@@ -163,7 +163,7 @@ sub _sort {
     # and start coordinate
     my $sorter = Sort::External->new( cache_size => 1_000_000 );
     while( my $f = $stream->() ) {
-        $sorter->feed( "$f->{seq_id}\0$f->{start}\0".Storable::freeze( $f ) );
+        $sorter->feed( "$f->{seq_id}\0".pack('N',$f->{start})."\0".Storable::freeze( $f ) );
     }
     $sorter->finish;
 
@@ -171,7 +171,7 @@ sub _sort {
     return sub {
         my $s = $sorter->fetch
             or return;
-        return Storable::thaw( substr( $s, 1+index( $s, "\0", 1+index( $s, "\0" ) )));
+        return Storable::thaw( substr( $s, 1+index( $s, "\0" )+5 ) );
     };
 }
 
