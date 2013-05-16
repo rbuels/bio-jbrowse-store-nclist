@@ -24,12 +24,12 @@ nested-containment list optimized for chunked fetching over HTTP
       path   => "path/to/directory"
   });
 
-  # insert feature data into the store
+  # insert plain hashrefs of feature data into the store
   $store->insert( $stream, ... );
   $store->insert_presorted( $sorted_stream, ... );
 
   # retrieve feature data from the store
-  my $fstream = $store->get_features( seq_id => 'chr1', start => 60, end => 85 );
+  my $fstream = $store->get_features({ seq_id => 'chr1', start => 60, end => 85 });
   while( my $feature = $fstream->() ) {
       # do something with the feature
   }
@@ -91,6 +91,10 @@ sub _new {
 # || Bio::JBrowse::Store::NCList::JSONFileStorage->new( $outDir, $args->{compress}),
 use Data::Dump 'dump';
 
+=head2 insert_presorted( $stream, ... )
+
+=cut
+
 sub insert_presorted {
     my ( $self, @streams ) = @_;
 
@@ -123,6 +127,10 @@ sub _refseq_path {
     my ( $self, $refseq_name ) = @_;
     return File::Spec->catdir( $self->{path}, $refseq_name );
 }
+
+=head2 insert( $stream, ... )
+
+=cut
 
 sub insert {
     my $self = shift;
@@ -166,18 +174,6 @@ sub _sort {
             or return;
         return Storable::thaw( substr( $s, 1+index( $s, "\0", 1+index( $s, "\0" ) )));
     };
-}
-
-
-sub _finish_load {
-    my ( $self ) = @_;
-    if( $self->{loading} ) {
-        $self->{ival_store}->finishLoad();
-    }
-}
-
-sub DESTROY {
-    shift->_finish_load;
 }
 
 1;
