@@ -69,12 +69,35 @@ sub new {
 
 sub _write_htaccess {
     my ( $self ) = @_;
+
     if( $self->{compress} && ! $self->{htaccess_written} ) {
-        require IO::File;
-        require GenomeDB;
         my $hn = File::Spec->catfile( $self->{outDir}, '.htaccess' );
+        return if -e $hn;
+
         open my $h, '>', $hn or die "$! writing $hn";
-        $h->print( GenomeDB->precompression_htaccess( '.jsonz', '.txtz', '.txt.gz' ));
+
+        my @extensions = qw( .jsonz .txtz .txt.gz );
+        my $re = '('.join('|',@extensions).')$';
+        $re =~ s/\./\\./g;
+
+        print $h <<EOA;
+# This Apache .htaccess file is for
+# serving precompressed files (@extensions) with the proper
+# Content-Encoding HTTP headers.  In order for Apache to pay attention
+# to this, its AllowOverride configuration directive for this
+# filesystem location must allow FileInfo overrides.
+<IfModule mod_gzip.c>
+    mod_gzip_item_exclude "$re"
+</IfModule>
+<IfModule setenvif.c>
+    SetEnvIf Request_URI "$re" no-gzip dont-vary
+</IfModule>
+<IfModule mod_headers.c>
+  <FilesMatch "$re">
+    Header onsuccess set Content-Encoding gzip
+  </FilesMatch>
+</IfModule>
+EOA
         $self->{htaccess_written} = 1;
     }
 }

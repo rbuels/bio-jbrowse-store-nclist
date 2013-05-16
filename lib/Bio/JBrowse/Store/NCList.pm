@@ -89,7 +89,6 @@ sub _new {
     return $self;
 }
 # || Bio::JBrowse::Store::NCList::JSONFileStorage->new( $outDir, $args->{compress}),
-use Data::Dump 'dump';
 
 =head2 insert_presorted( $stream, ... )
 

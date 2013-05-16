@@ -31,7 +31,6 @@ use List::Util qw(max);
 
 =cut
 
-use Carp::Always;
 sub new {
     my ($class, $start, $end, $setSublist, $featList) = @_;
 
