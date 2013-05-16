@@ -71,10 +71,9 @@ $store->insert( do {
 });
 
 my $content = slurp_tree( $dir );
-print `find $dir`;
-is_deeply( $content,
-           {},
-           ) or diag explain $content;
+is( $content->{'ctgA/trackData.json'}{featureCount}, 3 );
+is( $content->{'ctgB/trackData.json'}{featureCount}, 1 );
+# diag explain $content;
 
 done_testing;
 
