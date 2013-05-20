@@ -1,4 +1,6 @@
 package Bio::JBrowse::Store::NCList;
+#ABSTRACT: stores feature data in an on-disk lazy nested-containment list optimized for fetching over HTTP
+
 use strict;
 use warnings;
 
@@ -12,11 +14,6 @@ use Sort::External ();
 use Bio::JBrowse::Store::NCList::ArrayRepr ();
 use Bio::JBrowse::Store::NCList::IntervalStore ();
 use Bio::JBrowse::Store::NCList::JSONFileStorage ();
-
-=head1 NAME
-
-Bio::JBrowse::Store::NCList - stores feature data in an on-disk lazy
-nested-containment list optimized for chunked fetching over HTTP
 
 =head1 SYNOPSIS
 
@@ -34,9 +31,8 @@ nested-containment list optimized for chunked fetching over HTTP
       # do something with the feature
   }
 
-=head1 METHODS
 
-=head2 new( \%args )
+=method new( \%args )
 
  Create a new store, overwriting any existing files.
 
@@ -90,7 +86,7 @@ sub _new {
 }
 # || Bio::JBrowse::Store::NCList::JSONFileStorage->new( $outDir, $args->{compress}),
 
-=head2 insert_presorted( $stream, ... )
+=method insert_presorted( $stream, ... )
 
 =cut
 
@@ -126,7 +122,7 @@ sub _refseq_path {
     return File::Spec->catdir( $self->{path}, $refseq_name );
 }
 
-=head2 insert( $stream, ... )
+=method insert( $stream, ... )
 
 =cut
 
