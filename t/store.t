@@ -10,7 +10,7 @@ use JSON 2;
 use Bio::JBrowse::Store::NCList;
 
 use lib 't/lib';
-use FileSlurping qw( slurp_tree );
+use FileSlurping qw( slurp_tree slurp_stream );
 
 {
     my $dir = tempdir( CLEANUP => 1 );
@@ -29,7 +29,7 @@ use FileSlurping qw( slurp_tree );
     );
 
     # test sorting
-    my @sorted_features = snarf_stream(
+    my @sorted_features = slurp_stream(
         $store->_sort( do {
             my @t = @test_features;
             sub { shift @t }
@@ -80,14 +80,4 @@ use FileSlurping qw( slurp_tree );
 }
 
 done_testing;
-
-
-sub snarf_stream {
-    my ( $stream ) = @_;
-    my @results;
-    while( my $f = $stream->() ) {
-        push @results, $f;
-    }
-    return @results;
-}
 

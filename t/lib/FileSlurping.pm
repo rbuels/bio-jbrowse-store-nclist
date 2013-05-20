@@ -15,7 +15,7 @@ use warnings;
 use Carp::Always;
 
 use base 'Exporter';
-our @EXPORT_OK = qw( slurp_tree slurp );
+our @EXPORT_OK = qw( slurp_tree slurp slurp_stream );
 
 use File::Spec;
 
@@ -73,5 +73,22 @@ sub slurp {
 
     return $contents;
 }
+
+
+=head2 slurp_stream( $stream )
+
+Slurp an entire stream and return its contents as a list.
+
+=cut
+
+sub slurp_stream {
+    my ( $stream ) = @_;
+    my @results;
+    while( my $f = $stream->() ) {
+        push @results, $f;
+    }
+    return @results;
+}
+
 
 1;
