@@ -20,7 +20,6 @@ sub new {
     my $self;
     my @buffer;
     return $self = bless sub {
-        my @buffer;
         return shift @buffer || do {
             while( !@buffer && ( my $f = $stream->() ) ) {
                 push @buffer, $self->_apply_filter( $filter_sub, $f );
@@ -34,7 +33,8 @@ sub _apply_filter {
     my ( $self, $filter_sub, $feature ) = @_;
 
     return $feature if $filter_sub->( $feature );
-    return map $self->_apply_filter( $filter_sub, $_ ), @{ $feature->{subfeatures} || [] };
+    return map $self->_apply_filter( $filter_sub, $_ ),
+               @{ $feature->{subfeatures} || [] };
 }
 
 1;
