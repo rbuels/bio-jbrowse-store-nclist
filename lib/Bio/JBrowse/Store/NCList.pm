@@ -9,8 +9,6 @@ use Scalar::Util ();
 
 use Storable ();
 
-use Sort::External ();
-
 use Bio::JBrowse::Store::NCList::ArrayRepr ();
 use Bio::JBrowse::Store::NCList::IntervalStore ();
 use Bio::JBrowse::Store::NCList::JSONFileStorage ();
@@ -150,6 +148,8 @@ sub _combine_streams {
 
 sub _sort {
     my ( $self, @streams ) = @_;
+
+    require Sort::External;
 
     # make a single stream
     my $stream = $self->_combine_streams( @streams );
