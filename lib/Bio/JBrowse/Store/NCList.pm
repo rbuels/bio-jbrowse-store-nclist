@@ -88,6 +88,14 @@ sub _new {
 
 =method insert_presorted( $stream, ... )
 
+Insert the feature hashrefs from the given pre-sorted stream(s) into
+the NCList store.  Streams must be sorted by reference sequence name
+ascending, then start coordinate ascending.
+
+A stream is just a subroutine ref that returns a series of single
+hashrefs when called repeatedly, then returns nothing when the stream
+is at an end.
+
 =cut
 
 sub insert_presorted {
@@ -123,6 +131,16 @@ sub _refseq_path {
 }
 
 =method insert( $stream, ... )
+
+Insert the feature hashrefs from the given unsorted stream(s) into the
+NCList store.
+
+Sorts the contents of the streams using L<Sort::External> before
+loading it into the NCList store.
+
+A stream is just a subroutine ref that returns a series of single
+hashrefs when called repeatedly, then returns nothing when the stream
+is at an end.
 
 =cut
 
