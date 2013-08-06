@@ -36,10 +36,10 @@ sub new {
         $measure, $output, $sizeThresh) = @_;
 
     my $self = { attrs => $attrs,
-	         start => $attrs->makeGetter("start"),
+                 start => $attrs->makeGetter("start"),
                  end => $attrs->makeGetter("end"),
                  setSublist => $attrs->makeSetter("sublist"),
-		 lazyClass => $lazyClass,
+                 lazyClass => $lazyClass,
                  makeLazy => $makeLazy,
                  loadChunk => $loadChunk,
                  measure => $measure,
@@ -63,8 +63,8 @@ sub importExisting {
         $maxEnd, $loadChunk, $topLevelList) = @_;
 
     my $self = { attrs => $attrs,
-		 lazyClass => $lazyClass,
-		 start => $attrs->makeGetter("start"),
+                 lazyClass => $lazyClass,
+                 start => $attrs->makeGetter("start"),
                  end => $attrs->makeGetter("end"),
                  count => $count,
                  minStart => $minStart,

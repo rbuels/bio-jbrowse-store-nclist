@@ -45,8 +45,8 @@ sub new {
     my $curList = [];
 
     my $self = { 'topList'    => $curList,
-		 'setSublist' => $setSublist,
-	         'count'      => scalar( @features ),
+                 'setSublist' => $setSublist,
+                 'count'      => scalar( @features ),
                  'minStart'   => ( @features ? $start->($features[0]) : undef ),
                };
     bless $self, $class;
@@ -58,38 +58,38 @@ sub new {
     my $topSublist;
     for (my $i = 1; $i < @features; $i++) {
         $maxEnd = max( $maxEnd, $end->( $features[$i] ));
-	#if this interval is contained in the previous interval,
-	if ($end->($features[$i]) < $end->($features[$i - 1])) {
-	    #create a new sublist starting with this interval
-	    push @sublistStack, $curList;
-	    $curList = [$features[$i]];
+        #if this interval is contained in the previous interval,
+        if ($end->($features[$i]) < $end->($features[$i - 1])) {
+            #create a new sublist starting with this interval
+            push @sublistStack, $curList;
+            $curList = [$features[$i]];
             $setSublist->($features[$i - 1], $curList);
-	} else {
-	    #find the right sublist for this interval
-	    while (1) {
+        } else {
+            #find the right sublist for this interval
+            while (1) {
                 #if we're at the top level list,
-		if ($#sublistStack < 0) {
+                if ($#sublistStack < 0) {
                     #just add the current feature
-		    push @$curList, $features[$i];
-		    last;
-		} else {
-		    $topSublist = $sublistStack[$#sublistStack];
+                    push @$curList, $features[$i];
+                    last;
+                } else {
+                    $topSublist = $sublistStack[$#sublistStack];
                     #if the last interval in the top sublist ends
                     #after the end of the current interval,
-		    if ($end->($topSublist->[$#{$topSublist}])
+                    if ($end->($topSublist->[$#{$topSublist}])
                         > $end->($features[$i]) ) {
-			#then curList is the first (deepest) sublist
+                        #then curList is the first (deepest) sublist
                         #that the current feature fits into, and
                         #we add the current feature to curList
-			push @$curList, $features[$i];
-			last;
-		    } else {
+                        push @$curList, $features[$i];
+                        last;
+                    } else {
                         #move on to the next shallower sublist
-			$curList = pop @sublistStack;
-		    }
-		}
-	    }
-	}
+                        $curList = pop @sublistStack;
+                    }
+                }
+            }
+        }
     }
 
     $self->{maxEnd} = $maxEnd;

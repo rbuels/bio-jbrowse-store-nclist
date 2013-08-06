@@ -131,7 +131,7 @@ sub startLoad {
         };
         $self->{lazyNCList} =
           Bio::JBrowse::Store::NCList::LazyNCList->new( $self->{attrs},
-			  $self->{lazyClass},
+                          $self->{lazyClass},
                           $makeLazy,
                           sub { $self->_loadChunk( @_); },
                           $measure,
