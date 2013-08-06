@@ -23,12 +23,14 @@ use Bio::JBrowse::Store::NCList::JSONFileStorage ();
   $store->insert( $stream, ... );
   $store->insert_presorted( $sorted_stream, ... );
 
-  # retrieve feature data from the store
-  my $fstream = $store->get_features({ seq_id => 'chr1', start => 60, end => 85 });
-  while( my $feature = $fstream->() ) {
-      # do something with the feature
-  }
+=cut
 
+# TODO IMPLEMENT RETRIEVAL
+#  # retrieve feature data from the store
+#  my $fstream = $store->get_features({ seq_id => 'chr1', start => 60, end => 85 });
+#  while( my $feature = $fstream->() ) {
+#      # do something with the feature
+#  }
 
 =method new( \%args )
 
