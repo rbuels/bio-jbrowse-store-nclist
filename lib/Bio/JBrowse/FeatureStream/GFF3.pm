@@ -35,8 +35,18 @@ sub new {
 sub _convert {
     my ( $self, $f ) = @_;
 
-    $f->{score} += 0 if defined $f->{score};
-    $f->{phase} += 0 if defined $f->{phase};
+    # numify and correct offset of start
+    $f->{start} -= 1 if defined $f->{start};
+
+    # convert strand to 1/0/-1/undef if necessary
+    { no warnings 'uninitialized';
+      $f->{strand} = ( { '+' => 1, '-' => -1 }->{$f->{strand}} || $f->{strand} || undef );
+    }
+
+    # numify end, score, phase, strand
+    for (qw( end score phase strand )) {
+        $f->{$_} += 0 if defined $f->{$_};
+    }
 
     my $a = delete $f->{attributes};
     my %h;

@@ -41,6 +41,8 @@ is( scalar @f, 6*2, 'got right double feature count' ) or diag explain \@f;
        or diag explain $data;
     is( scalar @{$cds_trackdata->{intervals}{nclist}[0][9][0][9]}, 7, 'mRNA has 7 subfeatures' )
        or diag explain $data;
+
+    is_deeply( $data, slurp_tree( 't/data/single_au9_gene_formatted' ) ) or diag explain $data;
 }
 
 
